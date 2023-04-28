@@ -108,6 +108,9 @@ def download_repo(config):
     max_retry = config['max_retry']
     proxies = {"http": config['proxies'], "https": config['proxies']}
     verbose = config['verbose']
+    skipped = config['skipped']
+    skipped = [] if skipped == "" else skipped.split('_')
+    skipped = ['.'+x for x in skipped]
 
     name = url.split('/')[4]
     save_dir = os.path.join(save_dir, name)
@@ -135,6 +138,8 @@ def download_repo(config):
         file_url = os.path.join(dl_url, file_path).replace("\\","/") # replace \ with / for Windows compatibility
         files.append((file_url, save_path))
 
+    files = list(filter(lambda x: True not in [x[1].endswith(postfix) for postfix in skipped], files))
+
     partial_req = partial(req_url, max_retry=max_retry, headers=headers, proxies=proxies)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_conns) as executor:
         future_to_url = (executor.submit(partial_req, dl_file) for dl_file in files)
@@ -161,5 +166,6 @@ if __name__ == "__main__":
     parser.add_argument('--max_retry', type=int, default=5, help='Max retries')
     parser.add_argument('--proxies', type=str, default='', help='Proxies used for connection')
     parser.add_argument('--verbose', type=bool, default=False, help='Display skipped files or not')
+    parser.add_argument('--skipped', type=str, default='', help='Skipped file format, separated by _')
     args = parser.parse_args()
     download_repo(args.__dict__)
